@@ -1,0 +1,107 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: A sample template
+Resources:
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: "application"
+      Scheme: "internal"
+      Subnets:
+        - !Ref Subnet1
+        - !Ref Subnet2
+      SecurityGroups: 
+        - !Ref ALBSecurityGroup
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions: 
+        - Type: "fixed-response"
+          FixedResponseConfig:
+            ContentType: "application/json"
+            MessageBody: "{'message':'OK'}"
+            StatusCode: 200
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: "HTTP"
+  ALBSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "HTTP allow from any"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: 80
+          ToPort: 80
+          CidrIp: "0.0.0.0/0"
+  VPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      CidrBlock: "172.31.0.0/20"
+  Subnet1:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      CidrBlock: "172.31.0.0/24"
+      AvailabilityZoneId: "apne1-az1"
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: true
+  Subnet2:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      CidrBlock: "172.31.1.0/24"
+      AvailabilityZoneId: "apne1-az2"
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: true
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+  SubnetRouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref Subnet1
+      RouteTableId: !Ref RouteTable
+  SubnetRouteTableAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref Subnet2
+      RouteTableId: !Ref RouteTable
+  MonitorNodeEC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: 'ami-02c3627b04781eada'
+      InstanceType: 't3.medium'
+      SubnetId: !Ref Subnet1
+      SecurityGroupIds: 
+        - !Ref EC2SecurityGroup
+  EC2SecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "SSH allow from EC2 Instance Connect"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: 22
+          ToPort: 22
+          CidrIp: "3.112.23.0/29"
+
+Outputs:
+  TargetURL:
+    Value: !Join
+      - ''
+      - - 'http://'
+        - !GetAtt 
+          - ALB
+          - DNSName
