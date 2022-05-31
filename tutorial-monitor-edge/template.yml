@@ -86,6 +86,9 @@ Resources:
       SubnetId: !Ref Subnet1
       SecurityGroupIds: 
         - !Ref EC2SecurityGroup
+      Tags:
+        - Key: "Name"
+          Value: "CoralreefMonitorEdgeNode"
   EC2SecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
